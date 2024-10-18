@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Tetris</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #gameBoard {
+            border: 2px solid #333;
+        }
+        #controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameBoard" width="300" height="600"></canvas>
+    <div id="controls">
+        <h3>Controls:</h3>
+        <p>← → : Move left/right</p>
+        <p>↑ : Rotate</p>
+        <p>↓ : Move down faster</p>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameBoard');
+        const ctx = canvas.getContext('2d');
+        const BLOCK_SIZE = 30;
+        const BOARD_WIDTH = 10;
+        const BOARD_HEIGHT = 20;
+
+        // Tetromino shapes
+        const SHAPES = [
+            [[1, 1, 1, 1]],
+            [[1, 1], [1, 1]],
+            [[1, 1, 1], [0, 1, 0]],
+            [[1, 1, 1], [1, 0, 0]],
+            [[1, 1, 1], [0, 0, 1]],
+            [[1, 1, 0], [0, 1, 1]],
+            [[0, 1, 1], [1, 1, 0]]
+        ];
+
+        let board = Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(0));
+        let currentPiece = null;
+        let currentX = 0;
+        let currentY = 0;
+
+        function newPiece() {
+            const shapeIndex = Math.floor(Math.random() * SHAPES.length);
+            currentPiece = SHAPES[shapeIndex];
+            currentX = Math.floor(BOARD_WIDTH / 2) - Math.floor(currentPiece[0].length / 2);
+            currentY = 0;
+
+            if (!isValidMove(0, 0)) {
+                // Game over
+                alert('Game Over!');
+                board = Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(0));
+            }
+        }
+
+        function isValidMove(offsetX, offsetY, newPiece = currentPiece) {
+            for (let y = 0; y < newPiece.length; y++) {
+                for (let x = 0; x < newPiece[y].length; x++) {
+                    if (newPiece[y][x]) {
+                        const newX = currentX + x + offsetX;
+                        const newY = currentY + y + offsetY;
+                        if (newX < 0 || newX >= BOARD_WIDTH || newY >= BOARD_HEIGHT || (newY >= 0 && board[newY][newX])) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function rotate() {
+            const newPiece = currentPiece[0].map((val, index) => currentPiece.map(row => row[index]).reverse());
+            if (isValidMove(0, 0, newPiece)) {
+                currentPiece = newPiece;
+            }
+        }
+
+        function merge() {
+            for (let y = 0; y < currentPiece.length; y++) {
+                for (let x = 0; x < currentPiece[y].length; x++) {
+                    if (currentPiece[y][x]) {
+                        board[currentY + y][currentX + x] = 1;
+                    }
+                }
+            }
+        }
+
+        function clearLines() {
+            for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell)) {
+                    board.splice(y, 1);
+                    board.unshift(Array(BOARD_WIDTH).fill(0));
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw board
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    if (board[y][x]) {
+                        ctx.fillStyle = 'blue';
+                        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (currentPiece) {
+                ctx.fillStyle = 'red';
+                for (let y = 0; y < currentPiece.length; y++) {
+                    for (let x = 0; x < currentPiece[y].length; x++) {
+                        if (currentPiece[y][x]) {
+                            ctx.fillRect((currentX + x) * BLOCK_SIZE, (currentY + y) * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (isValidMove(0, 1)) {
+                currentY++;
+            } else {
+                merge();
+                clearLines();
+                newPiece();
+            }
+            draw();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowLeft':
+                    if (isValidMove(-1, 0)) currentX--;
+                    break;
+                case 'ArrowRight':
+                    if (isValidMove(1, 0)) currentX++;
+                    break;
+                case 'ArrowDown':
+                    if (isValidMove(0, 1)) currentY++;
+                    break;
+                case 'ArrowUp':
+                    rotate();
+                    break;
+            }
+            draw();
+        });
+
+        newPiece();
+        setInterval(gameLoop, 500);
+    </script>
+</body>
+</html>
